@@ -42,6 +42,12 @@ const routes = [
     name: 'MyProfile',
     meta: { layout: 'main' },
     component: () => import('../views/MyProfile.vue')
+  },
+  {
+    path: '/cart',
+    name: 'CartView',
+    meta: { layout: 'empty' },
+    component: () => import('../views/CartView.vue')
   }
 ]
 

@@ -17,6 +17,7 @@
     </p>
     <button
       class="client-item__btn"
+      @click="addToCart"
     >
       Купить
     </button>
@@ -28,7 +29,12 @@ export default {
   name: 'ClientList',
   props: [
     'prod'
-  ]
+  ],
+  methods: {
+    addToCart () {
+      this.$emit('addToCart', this.prod)
+    }
+  }
 }
 </script>
 

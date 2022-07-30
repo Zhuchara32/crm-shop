@@ -6,6 +6,7 @@
         v-for="prod in arrForUsers"
         :key="prod.uidProd"
         :prod="prod"
+        @addToCart="addToCart"
       />
     </ul>
   </div>
@@ -27,7 +28,11 @@ export default {
     await this.fetchProdForUsers()
   },
   methods: {
-    ...mapActions(['fetchProdForUsers'])
+    ...mapActions(['fetchProdForUsers', 'ADD_ToCart']),
+    addToCart (arg) {
+      this.ADD_ToCart(arg)
+      this.$message('Товар добавлен в корзину')
+    }
   }
 }
 </script>

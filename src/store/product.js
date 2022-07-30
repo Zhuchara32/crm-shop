@@ -3,7 +3,8 @@ import firebase from 'firebase/app'
 export default {
   state: {
     prodArr: [], // массив продуктов, для продавца
-    arrForUsers: [] // массив продуктов, для покупателей
+    arrForUsers: [], // массив продуктов, для покупателей
+    backUrl: 'http://localhost:3080/' // ссылка на бэк
   },
   getters: {
     prodArr (state) {
@@ -38,16 +39,36 @@ export default {
     },
     setProdForUsers (state, users) {
       state.arrForUsers = Object.assign(users.prod)
+      state.arrForUsers.forEach(item => { item.quantity = 1 })
       console.log(state.arrForUsers)
     }
   },
   actions: {
+    async saleProd ({ dispatch, commit, state }, { cart, dataInfo }) {
+      commit('ADD_InfoToCart', dataInfo)
+      const data = JSON.parse(JSON.stringify(cart))
+      console.log(cart)
+      try {
+        const res = await fetch(state.backUrl + 'api/sale',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+          })
+        return await res.json()
+      } catch (error) {
+        console.error('Ошибка:', error)
+      }
+      dispatch('CHANGE_ActiveModal')
+    },
     clearArr ({ commit }) {
       console.log('yes')
       commit('clearArr')
     },
-    async fetchProdForUsers ({ commit, dispatch }) {
-      const res = await fetch('http://localhost:3080/api/users')
+    async fetchProdForUsers ({ commit, state }) {
+      const res = await fetch(state.backUrl + 'api/users')
       const data = await res.json()
       commit('setProdForUsers', data)
     },
@@ -136,6 +157,7 @@ export default {
     saveChange ({ dispatch, commit, state },
       { nameProd, count, price, img, description, id, confirmEddit, typeProduct, confirmDelete, confirmCart }) {
       const obj = state.prodArr.find(el => el.id === id)
+      obj.confirmEddit = false
       console.log(obj)
       if (obj.downloadURL !== img) {
         dispatch('addImage', { nameProd, count, price, img, description, id, confirmEddit, typeProduct, confirmDelete, confirmCart })
@@ -143,61 +165,18 @@ export default {
         dispatch('updateProd', { nameProd, count, price, img, description, id, confirmDelete, confirmCart, confirmEddit, typeProduct })
       }
     },
-    async updateProd ({ dispatch, commit, state },
-      { nameProd, count, price, img, downloadURL, description, id, confirmEddit, typeProduct, confirmDelete, confirmCart }) {
-      confirmEddit = false
+    async updateProd ({ dispatch, commit },
+      { nameProd, count, price, img, downloadURL, description, id }) {
       if (!downloadURL) {
         try {
           const uid = await dispatch('getUid')
           commit('saveUid', uid)
           const downloadURL = img
 
-          // const arrArg = [nameProd, count, price, description, downloadURL]
-          // console.log('111')
-          // for (let i = 0; i < state.prodArr.length; i++) {
-          //   console.log(state.prodArr[i].nameProd)
-          //   const isNameProd = arrArg.includes(state.prodArr.nameProd)
-
-          //   const isCount = arrArg.includes(state.prodArr.count)
-          //   const isPrice = arrArg.includes(state.prodArr.price)
-          //   const isDescription = arrArg.includes(state.prodArr.description)
-          //   const isDownloadUrl = arrArg.includes(state.prodArr.downloadURL)
-
-          //   if (isNameProd) {
-          //     console.log('2')
-          //     await firebase.database().ref(`/users/${uid}/products/${id}/`).update({
-          //       nameProd
-          //     })
-          //   }
-          //   if (!isCount) {
-          //     console.log('22')
-          //     await firebase.database().ref(`/users/${uid}/products/${id}/`).update({
-          //       count
-          //     })
-          //   }
-          //   if (!isPrice) {
-          //     console.log('222')
-          //     await firebase.database().ref(`/users/${uid}/products/${id}/`).update({
-          //       price
-          //     })
-          //   }
-          //   if (!isDescription) {
-          //     console.log('2222')
-          //     await firebase.database().ref(`/users/${uid}/products/${id}/`).update({
-          //       description
-          //     })
-          //   }
-          //   if (!isDownloadUrl) {
-          //     console.log('22222')
-          //     await firebase.database().ref(`/users/${uid}/products/${id}/`).update({
-          //       downloadURL
-          //     })
-          //   }
-          // }
-
           await firebase.database().ref(`/users/${uid}/products/${id}/`).update({
             nameProd, count, price, description, downloadURL
           })
+          await dispatch('clearArr')
           await dispatch('fetchProd')
         } catch (e) {
           commit('setError', e)
@@ -207,9 +186,10 @@ export default {
         try {
           const uid = await dispatch('getUid')
           commit('saveUid', uid)
-          await firebase.database().ref(`/users/${uid}/products/${id}/`).set({
-            nameProd, count, price, description, downloadURL, confirmEddit, typeProduct, confirmDelete, confirmCart
+          await firebase.database().ref(`/users/${uid}/products/${id}/`).update({
+            nameProd, count, price, description, downloadURL
           })
+          await dispatch('clearArr')
           await dispatch('fetchProd')
         } catch (e) {
           commit('setError', e)
